@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rabbit Homestay - แร็ปบิทโฮมสเตย์ ระยอง</title>
+  
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@3.9.0/dist/full.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = { 
+      theme: { 
+        extend: { 
+          fontFamily: { sans: ['Prompt', 'sans-serif'], serif: ['Playfair Display', 'serif'] }, 
+          colors: { primary: '#0f766e', secondary: '#047857', accent: '#d97706', basebg: '#fafaf9' } 
+        } 
+      } 
+    }
+  </script>
+  <style>
+    body { font-family: 'Prompt', sans-serif; background-color: #fafaf9; color: #44403c; }
+    h1, h2, h3, .font-serif { font-family: 'Playfair Display', 'Prompt', serif; }
+    .fade-enter-active, .fade-leave-active { transition: opacity 0.4s ease; }
+    .fade-enter-from, .fade-leave-to { opacity: 0; }
+    [v-cloak] { display: none; }
+    html { scroll-behavior: smooth; }
+    .table-responsive { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .table-responsive th, .table-responsive td { padding: 16px; text-align: left; border-bottom: 1px solid #e7e5e4; vertical-align: middle; }
+    .table-responsive th { background-color: #f5f5f4; font-weight: 600; color: #57534e; text-transform: uppercase; font-size: 0.85rem;}
+    .table-responsive tbody tr:hover { background-color: #fafaf9; transition: background-color 0.2s; }
+    .resort-card { border-radius: 1rem; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); transition: all 0.3s ease; border: 1px solid #f5f5f4; overflow: hidden; background: #fff;}
+    .resort-card:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+  </style>
+</head>
+<body>
+
+<!-- ระบบดักจับ Error กรณีโค้ดพัง จะไม่ขึ้นจอขาว -->
+<div id="fallback-error" style="display:none; padding: 50px; text-align: center; color: red;">
+  <h2 style="font-size: 24px; font-weight: bold;">⚠️ ระบบขัดข้อง (Javascript Error)</h2>
+  <p>เกิดข้อผิดพลาดในการโหลดหน้าเว็บ กรุณาตรวจสอบว่าคุณใส่ลิงก์ API_URL ถูกต้องหรือไม่</p>
+</div>
+
+<div id="app" v-cloak class="min-h-screen flex flex-col">
+  
+  <!-- ================= NAVBAR ================= -->
+  <div class="navbar bg-white/90 backdrop-blur-md shadow-sm sticky top-0 z-50 px-4 lg:px-12 border-b border-stone-200">
+    <div class="flex-1">
+      <a @click="changeView('home')" class="btn btn-ghost normal-case text-2xl text-primary font-bold font-serif tracking-wide hover:bg-transparent">
+        <i class="fa-solid fa-spa mr-2 text-accent"></i> {{ settings.ResortName || 'Rabbit Homestay' }}
+      </a>
+    </div>
+    <div class="flex-none hidden lg:flex">
+      <ul class="menu menu-horizontal px-1 font-medium text-stone-600">
+        <li><a @click="changeView('home')" class="hover:text-primary rounded-full px-5">หน้าแรก</a></li>
+        <li><a @click="changeView('rooms')" class="hover:text-primary rounded-full px-5">ห้องพัก</a></li>
+        <li><a @click="changeView('status')" class="hover:text-primary rounded-full px-5">เช็คสถานะการจอง</a></li>
+      </ul>
+    </div>
+    <div class="flex-none">
+      <button @click="changeView('admin')" class="btn btn-ghost btn-circle text-stone-400 hover:text-primary ml-2 tooltip tooltip-bottom" data-tip="สำหรับแอดมิน">
+        <i class="fa-solid fa-circle-user text-xl"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div v-if="isLoading" class="fixed inset-0 bg-stone-50 bg-opacity-90 z-[100] flex flex-col justify-center items-center backdrop-blur-sm">
+    <div class="relative w-20 h-20">
+      <div class="absolute inset-0 border-4 border-primary/20 rounded-full"></div>
+      <div class="absolute inset-0 border-4 border-primary rounded-full border-t-transparent animate-spin"></div>
+    </div>
+    <p class="mt-6 text-primary font-medium tracking-widest uppercase text-sm animate-pulse">กำลังโหลดข้อมูล...</p>
+  </div>
+
+  <!-- ================= MAIN CONTENT ================= -->
+  <main class="flex-grow">
+    <transition name="fade" mode="out-in">
+
+      <!-- 1. HOME -->
+      <div v-if="currentView === 'home'" key="home">
+        <!-- Hero Section -->
+        <div class="hero min-h-[75vh] relative bg-fixed bg-center bg-cover" style="background-image: url('img/1.JPG');">
+          <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70"></div>
+          <div class="hero-content text-center text-neutral-content relative z-10 w-full px-4">
+            <div class="max-w-3xl">
+              <span class="text-accent font-semibold tracking-[0.2em] uppercase text-sm mb-4 block">แร็ปบิทโฮมสเตย์ ระยอง</span>
+              <h1 class="mb-6 text-5xl md:text-7xl font-bold text-white font-serif leading-tight drop-shadow-lg">Rabbit<br>Homestay</h1>
+              <p class="mb-10 text-lg md:text-xl text-stone-200 font-light drop-shadow">ที่พัก / โฮมสเตย์ / Pool Villa ในเมืองระยอง / ห้องคาราโอเกะ / โต๊ะพลู <br class="hidden md:block"> ไม่ไกลทะเล มีสระว่ายน้ำ เล่นฟรี</p>
+              <button @click="changeView('rooms')" class="btn bg-primary hover:bg-secondary text-white border-none btn-lg rounded-full px-12 shadow-xl hover:-translate-y-1">จองห้องพัก <i class="fa-solid fa-arrow-right ml-2"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- About Section -->
+        <section class="py-20 px-4 md:px-8 max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16">
+          <div class="w-full lg:w-1/2 relative">
+            <div class="absolute -top-6 -left-6 w-32 h-32 bg-accent/10 rounded-full blur-2xl"></div>
+            <img src="img/2.jpg" class="rounded-2xl shadow-2xl relative z-10 object-cover h-[500px] w-full" />
+            <div class="absolute -bottom-8 -right-8 bg-white p-6 rounded-xl shadow-xl z-20 border border-stone-100">
+              <div class="flex items-center gap-4"><div class="bg-primary/10 text-primary p-3 rounded-full"><i class="fa-solid fa-star text-xl"></i></div><div><p class="text-xs text-stone-500 uppercase font-bold tracking-wider">Rating</p><p class="font-serif text-2xl font-bold text-stone-800">5.0 / 5</p></div></div>
+            </div>
+          </div>
+          <div class="w-full lg:w-1/2 space-y-6">
+            <span class="text-primary font-bold tracking-widest uppercase text-sm">About Us</span>
+            <h2 class="text-4xl md:text-4xl font-serif font-bold text-stone-800 leading-tight">โฮมสเตย์บรรยากาศเป็นกันเอง<br>ในเมืองระยอง</h2>
+            <p class="text-stone-600 leading-relaxed text-lg">Rabbit Homestay แร็ปบิทโฮมสเตย์ ระยอง ยินดีต้อนรับ! เราให้บริการที่พักสไตล์โฮมสเตย์และพูลวิลล่า โดดเด่นด้วยทำเลในเมือง เดินทางสะดวก ไม่ไกลจากทะเล พร้อมสระว่ายน้ำส่วนกลางให้คุณเล่นฟรี รองรับทั้งการเข้าพักแบบส่วนตัว คู่รัก และแบบกรุ๊ป พร้อมบริการอาหารเช้าแบบสั่งจองล่วงหน้า</p>
+            <ul class="space-y-3 text-stone-700 mt-6">
+              <li class="flex items-center gap-3"><i class="fa-solid fa-check text-accent"></i> ที่พักในเมืองระยอง ไม่ไกลทะเล มีสระว่ายน้ำ เล่นฟรี</li>
+              <li class="flex items-center gap-3"><i class="fa-solid fa-check text-accent"></i> มีห้องแบบตู้คอนเทนเนอร์เก๋ๆ (เตียง 3.5 ฟุต 2 เตียง)</li>
+              <li class="flex items-center gap-3"><i class="fa-solid fa-check text-accent"></i> รองรับลูกค้าแบบกรุ๊ป และมีบริการอาหารเช้า (สั่งจอง)</li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- Featured Rooms -->
+        <section class="bg-stone-100 py-20 px-4 md:px-8">
+          <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+              <span class="text-accent font-bold tracking-widest uppercase text-sm">Our Accommodation</span>
+              <h2 class="text-4xl font-serif font-bold text-stone-800 mt-2">ห้องพักแนะนำ</h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+              <div v-for="room in rooms.slice(0, 3)" :key="'feat-'+room.id" class="resort-card flex flex-col h-full group">
+                <div class="relative overflow-hidden h-64">
+                  <img :src="room.image" class="w-full h-full object-cover group-hover:scale-110 transition duration-700" onerror="this.src='https://placehold.co/600x400?text=Room'" />
+                  <div class="absolute top-4 right-4 bg-white/90 px-3 py-1 rounded-full text-xs font-bold text-primary shadow-sm">พักได้ {{ room.capacity }} ท่าน</div>
+                </div>
+                <div class="p-8 flex-grow flex flex-col">
+                  <h3 class="text-2xl font-serif font-bold text-stone-800 mb-2">{{ room.name }}</h3>
+                  <div class="flex items-center gap-4 text-sm text-stone-500 mb-6">
+                    <span class="flex items-center gap-1"><i class="fa-solid fa-snowflake text-stone-400"></i> แอร์เย็นฉ่ำ</span>
+                    <span class="flex items-center gap-1"><i class="fa-solid fa-car text-stone-400"></i> ที่จอดรถสะดวก</span>
+                  </div>
+                  <p class="text-stone-600 text-sm mb-8 flex-grow line-clamp-2">{{ room.amenities }}</p>
+                  <div class="flex justify-between items-end mt-auto pt-4 border-t border-stone-100">
+                    <div><span class="text-xs text-stone-400 uppercase font-bold block mb-1">เริ่มต้นที่</span><div class="text-2xl font-bold text-primary">฿{{ formatPrice(room.price) }}<span class="text-sm font-normal">/คืน</span></div></div>
+                    <button @click="selectRoom(room)" class="btn btn-outline btn-primary rounded-full px-6">จองเลย</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="text-center mt-12"><button @click="changeView('rooms')" class="btn btn-ghost hover:bg-stone-200 text-stone-600 rounded-full px-8">ดูห้องพักทั้งหมด <i class="fa-solid fa-arrow-right-long ml-2"></i></button></div>
+          </div>
+        </section>
+
+        <!-- Facilities -->
+        <section class="py-20 px-4 md:px-8 max-w-7xl mx-auto">
+          <div class="text-center mb-16"><span class="text-primary font-bold uppercase text-sm">Facilities</span><h2 class="text-4xl font-serif font-bold text-stone-800 mt-2">สิ่งอำนวยความสะดวก</h2></div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="relative rounded-2xl overflow-hidden h-80 group"><img src="https://images.unsplash.com/photo-1572331165267-854da2b10ccc?q=80&w=800&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" /><div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-8"><h3 class="text-2xl font-serif text-white font-bold">สระว่ายน้ำ (เล่นฟรี)</h3></div></div>
+            <div class="relative rounded-2xl overflow-hidden h-80 group"><img src="https://images.unsplash.com/photo-1533090161767-e6ffed986c88?q=80&w=800&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" /><div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-8"><h3 class="text-2xl font-serif text-white font-bold">บริการอาหารเช้า (สั่งจอง)</h3></div></div>
+            <div class="relative rounded-2xl overflow-hidden h-80 group"><img src="https://images.unsplash.com/photo-1528605248644-14dd04022da1?q=80&w=800&auto=format&fit=crop" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" /><div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-8"><h3 class="text-2xl font-serif text-white font-bold">รองรับลูกค้าแบบกรุ๊ป</h3></div></div>
+          </div>
+        </section>
+      </div>
+
+      <!-- 2. ROOMS -->
+      <div v-if="currentView === 'rooms'" key="rooms" class="bg-stone-50 py-12">
+        <div class="max-w-7xl mx-auto px-4 lg:px-8">
+          <div class="flex flex-col items-center text-center mb-16 pt-8">
+            <h2 class="text-4xl md:text-5xl font-bold font-serif text-stone-800 mb-4">ห้องพักทั้งหมด</h2>
+            <div class="w-24 h-1 bg-accent rounded-full"></div>
+            <p class="text-stone-500 mt-6 max-w-2xl text-lg">เลือกห้องพักที่เหมาะกับสไตล์การพักผ่อนของคุณ พร้อมสิ่งอำนวยความสะดวกครบครัน แอร์ ที่นอนนุ่ม ที่จอดรถ ตู้เย็น ทีวี โซฟา ผ้าเช็ดตัว ของใช้ในห้องน้ำ กาแฟ และมาม่า</p>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+            <div v-for="room in rooms" :key="room.id" class="resort-card flex flex-col h-full group">
+              <div class="relative overflow-hidden h-64"><img :src="room.image" class="w-full h-full object-cover group-hover:scale-110 transition duration-700" onerror="this.src='https://placehold.co/600x400?text=Room'" /><div class="absolute top-4 right-4 bg-white/90 px-3 py-1 rounded-full text-xs font-bold text-primary shadow-sm"><i class="fa-solid fa-user-group mr-1"></i> พักได้ {{ room.capacity }} ท่าน</div></div>
+              <div class="p-8 flex-grow flex flex-col">
+                <h2 class="text-2xl font-serif font-bold text-stone-800 mb-4">{{ room.name }}</h2>
+                <div class="bg-stone-50 p-4 rounded-xl mb-6 flex-grow border border-stone-100"><span class="text-xs font-bold text-stone-400 uppercase block mb-2">สิ่งอำนวยความสะดวก</span><p class="text-sm text-stone-600">{{ room.amenities }}</p></div>
+                <div class="flex justify-between items-center mt-auto"><div class="text-3xl font-bold text-primary">฿{{ formatPrice(room.price) }}<span class="text-sm font-normal block text-right mt-[-4px]">/คืน</span></div><button @click="selectRoom(room)" class="btn btn-primary rounded-full px-8">จองทันที</button></div>
+              </div>
+            </div>
+            
+            <div v-if="rooms.length === 0 && !isLoading" class="col-span-full text-center py-20 bg-white rounded-2xl border border-stone-200">
+               <i class="fa-solid fa-bed-pulse text-5xl text-stone-300 mb-4 block"></i>
+               <h3 class="text-xl font-bold text-stone-700">ยังไม่มีข้อมูลห้องพัก</h3>
+               <p class="text-stone-500">กรุณาตรวจสอบการตั้งค่าฐานข้อมูลใน Google Sheets ของคุณ</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. BOOKING FORM -->
+      <div v-if="currentView === 'booking'" key="booking" class="bg-stone-50 py-12 min-h-[80vh]">
+        <div class="max-w-6xl mx-auto px-4 lg:px-8">
+          <button @click="changeView('rooms')" class="btn btn-ghost hover:bg-white mb-8 text-stone-500 rounded-full"><i class="fa-solid fa-arrow-left mr-2"></i> กลับไปเลือกห้องพัก</button>
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <!-- Form Section -->
+            <div class="lg:col-span-8 resort-card p-8 md:p-10">
+              <h2 class="text-3xl font-serif font-bold text-stone-800 mb-2">รายละเอียดการเข้าพัก</h2>
+              <form @submit.prevent="proceedToPayment" class="space-y-8 mt-6">
+                <div class="bg-stone-50 p-6 rounded-2xl border border-stone-100">
+                  <h3 class="font-bold text-stone-700 mb-4"><i class="fa-regular fa-calendar-check text-primary"></i> วันที่เข้าพัก</h3>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="form-control"><label class="label font-semibold text-stone-600">เช็คอิน</label><input type="date" v-model="form.checkIn" :min="todayDate" required class="input input-bordered bg-white" /></div>
+                    <div class="form-control"><label class="label font-semibold text-stone-600">เช็คเอาท์</label><input type="date" v-model="form.checkOut" :min="minCheckOut" required class="input input-bordered bg-white" /></div>
+                  </div>
+                  <div v-if="calcNights > 0" class="mt-4 text-primary bg-primary/5 p-3 rounded-xl border border-primary/10">รวมระยะเวลาเข้าพัก <strong class="text-lg">{{ calcNights }}</strong> คืน</div>
+                </div>
+                <div>
+                  <h3 class="font-bold text-stone-700 mb-4"><i class="fa-regular fa-address-card text-primary"></i> ข้อมูลผู้ติดต่อ</h3>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="form-control md:col-span-2"><label class="label font-semibold text-stone-600">จำนวนผู้เข้าพัก (ไม่เกิน {{ selectedRoom.capacity }} ท่าน)</label><input type="number" v-model="form.guests" min="1" :max="selectedRoom.capacity" required class="input input-bordered w-full md:w-1/2 bg-white" /></div>
+                    <div class="form-control"><label class="label font-semibold text-stone-600">ชื่อ-นามสกุล</label><input type="text" v-model="form.customerName" required class="input input-bordered bg-white" /></div>
+                    <div class="form-control"><label class="label font-semibold text-stone-600">เบอร์โทรศัพท์ <span class="text-error">*</span></label><input type="tel" v-model="form.phone" required class="input input-bordered bg-white" /></div>
+                    <div class="form-control md:col-span-2"><label class="label font-semibold text-stone-600">Line ID หรือ Email</label><input type="text" v-model="form.emailLine" required class="input input-bordered bg-white" /></div>
+                  </div>
+                </div>
+                <div class="pt-6 border-t flex justify-end"><button type="submit" class="btn btn-primary btn-lg rounded-full px-12" :disabled="calcNights <= 0">ขั้นตอนต่อไป: ชำระเงิน <i class="fa-solid fa-arrow-right ml-2"></i></button></div>
+              </form>
+            </div>
+            <!-- Sidebar -->
+            <div class="lg:col-span-4 relative">
+              <div class="resort-card sticky top-24">
+                <img :src="selectedRoom.image" class="h-56 w-full object-cover" />
+                <div class="p-6">
+                  <h2 class="text-2xl font-serif font-bold text-stone-800">{{ selectedRoom.name }}</h2><div class="divider my-4 border-stone-100"></div>
+                  <div class="space-y-3 mb-6">
+                    <div class="flex justify-between text-stone-600"><span>ราคาต่อคืน</span><span class="font-medium">฿{{ formatPrice(selectedRoom.price) }}</span></div>
+                    <div class="flex justify-between text-stone-600"><span>จำนวนคืนเข้าพัก</span><span class="font-medium">{{ calcNights > 0 ? calcNights : 0 }} คืน</span></div>
+                  </div>
+                  <div class="bg-stone-50 p-4 rounded-xl border border-stone-200"><div class="flex justify-between items-end"><span class="text-stone-500 font-bold">ยอดชำระสุทธิ</span><span class="text-3xl font-bold text-primary">฿{{ formatPrice(calcTotal) }}</span></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. PAYMENT -->
+  <div v-if="currentView === 'payment'" key="payment" class="bg-stone-50 py-12 min-h-[80vh] flex flex-col items-center">
+        <ul class="steps steps-horizontal w-full max-w-2xl mb-12"><li class="step step-primary">เลือกห้อง</li><li class="step step-primary">ข้อมูลส่วนตัว</li><li class="step step-primary">ชำระเงิน</li></ul>
+        <div class="max-w-2xl w-full px-4">
+          <div class="resort-card p-8 md:p-12 text-center">
+            <div class="inline-block bg-green-50 text-green-700 px-6 py-2 rounded-full font-bold text-lg mb-8 border border-green-200">ยอดชำระเงิน: ฿{{ formatPrice(calcTotal) }}</div>
+            <h2 class="text-3xl font-serif font-bold text-stone-800 mb-6">ช่องทางการชำระเงิน</h2>
+            
+            <div class="bg-white p-6 rounded-2xl border-2 border-stone-100 shadow-inner mb-10 text-left relative overflow-hidden">
+              <i class="fa-solid fa-building-columns text-4xl text-primary/20 absolute top-4 right-4"></i>
+              <div class="relative z-10 space-y-3">
+                <div>
+                  <p class="text-xs text-stone-400 uppercase tracking-wider font-bold">ธนาคาร</p>
+                  <p class="text-lg text-stone-700 font-medium">{{ settings.BankName }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-stone-400 uppercase tracking-wider font-bold">เลขที่บัญชี</p>
+                  <p class="text-2xl text-primary font-mono font-bold tracking-tighter">{{ settings.AccountNumber }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-stone-400 uppercase tracking-wider font-bold">ชื่อบัญชี</p>
+                  <p class="text-lg text-stone-700 font-medium">{{ settings.AccountName }}</p>
+                </div>
+              </div>
+            </div>
+            <div class="w-full text-left">
+              <label class="label mb-2"><span class="label-text font-bold text-stone-700 text-lg">แนบหลักฐานการโอนเงิน (สลิป) <span class="text-error">*</span></span></label>
+              <div class="border-2 border-dashed border-primary/30 bg-primary/5 rounded-2xl p-6 text-center hover:bg-primary/10 transition cursor-pointer" onclick="document.getElementById('slipUpload').click()">
+                <input id="slipUpload" type="file" accept="image/*" @change="handleFileUpload" class="hidden" />
+                <div v-if="!previewImage" class="py-4"><i class="fa-solid fa-cloud-arrow-up text-4xl text-primary mb-3"></i><p class="text-stone-500 font-medium">คลิกเพื่ออัปโหลดรูปภาพสลิป</p></div>
+                <div v-else><img :src="previewImage" class="max-h-64 object-contain mx-auto rounded-lg shadow-md" /><p class="text-primary text-sm font-bold mt-4 underline">คลิกเพื่อเปลี่ยนรูป</p></div>
+              </div>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-4 w-full justify-center mt-10 pt-8 border-t"><button @click="changeView('booking')" class="btn btn-outline btn-lg rounded-full sm:w-1/3 text-stone-500">ย้อนกลับ</button><button @click="confirmBooking" :disabled="!form.slipBase64" class="btn btn-primary btn-lg rounded-full sm:w-1/2">ยืนยันการจองห้องพัก <i class="fa-solid fa-check ml-2"></i></button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. STATUS -->
+      <div v-if="currentView === 'status'" key="status" class="bg-stone-50 py-20 min-h-[80vh]">
+        <div class="max-w-3xl mx-auto px-4">
+          <div class="text-center mb-12"><div class="inline-flex justify-center items-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-6"><i class="fa-solid fa-magnifying-glass text-2xl"></i></div><h2 class="text-4xl font-bold font-serif text-stone-800 mb-4">ตรวจสอบสถานะการจอง</h2><p class="text-stone-500 text-lg">กรุณากรอกเบอร์โทรศัพท์ที่คุณใช้ทำการจอง</p></div>
+          <div class="resort-card p-4 md:p-6 mb-12 flex flex-col md:flex-row gap-3"><input type="text" v-model="searchKeyword" placeholder="เช่น 0824782190 หรือ รหัสจอง" class="input input-bordered input-lg w-full bg-stone-50" @keyup.enter="searchStatus" /><button @click="searchStatus" class="btn btn-primary btn-lg md:w-40 rounded-xl">ค้นหา</button></div>
+          
+          <div v-if="searchResults.length > 0" class="space-y-6">
+            <h3 class="font-bold text-stone-700 text-xl border-l-4 border-primary pl-3">ผลการค้นหา ({{ searchResults.length }} รายการ)</h3>
+            <div v-for="(res, index) in searchResults" :key="res.id || index" class="resort-card bg-white border-l-8" :class="statusColor(res.status)">
+              <div class="p-6 flex flex-col md:flex-row justify-between gap-6">
+                <div><div class="flex items-center gap-3 mb-2"><span class="text-xs font-bold text-stone-400">รหัสการจอง</span><span class="font-mono font-bold bg-stone-100 px-2 py-1 rounded">{{ res.id }}</span></div><h4 class="font-serif text-2xl font-bold mb-2">{{ res.room }}</h4><p class="text-stone-600"><i class="fa-regular fa-calendar text-primary"></i> {{ res.checkIn }} <i class="fa-solid fa-arrow-right mx-1"></i> {{ res.checkOut }}</p></div>
+                <div class="bg-stone-50 p-4 rounded-xl border border-stone-100 flex flex-col items-end justify-center"><span class="text-xs text-stone-500 mb-1">ยอดชำระสุทธิ</span><div class="text-2xl font-bold text-primary">฿{{ formatPrice(res.total) }}</div><div class="badge badge-lg border-none mt-2 font-bold" :class="statusBadge(res.status)">{{ res.status }}</div></div>
+              </div>
+            </div>
+          </div>
+          <div v-else-if="searched" class="resort-card bg-white p-10 text-center"><i class="fa-regular fa-face-frown text-5xl text-stone-300 mb-4 block"></i><h3 class="text-xl font-bold text-stone-700 mb-2">ไม่พบข้อมูลการจอง</h3><p class="text-stone-500">กรุณาตรวจสอบเบอร์โทรศัพท์อีกครั้ง</p></div>
+        </div>
+      </div>
+
+      <!-- 6. ADMIN -->
+      <div v-if="currentView === 'admin'" key="admin" class="bg-stone-100 min-h-screen py-10 px-4">
+        <div v-if="!isAdminLoggedIn" class="max-w-md mx-auto resort-card mt-20"><div class="p-10 text-center"><div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6"><i class="fa-solid fa-shield-halved text-primary text-3xl"></i></div><h2 class="text-2xl font-bold mb-2 font-serif">ระบบจัดการโฮมสเตย์</h2><p class="text-stone-500 mb-8">เฉพาะพนักงานและผู้ดูแลระบบเท่านั้น</p><form @submit.prevent="loginAdmin"><input type="password" v-model="adminPwd" required class="input input-bordered input-lg w-full mb-6 bg-stone-50 text-center" placeholder="รหัสผ่านเข้าใช้งาน" /><button type="submit" class="btn btn-primary btn-lg w-full rounded-xl">เข้าสู่ระบบ <i class="fa-solid fa-arrow-right-to-bracket ml-2"></i></button></form></div></div>
+        
+        <div v-else class="max-w-7xl mx-auto">
+          <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-white p-6 rounded-2xl shadow-sm border"><div><h2 class="text-3xl font-bold font-serif text-stone-800"><i class="fa-solid fa-chart-pie text-primary mr-3"></i>Dashboard</h2></div><button @click="logoutAdmin" class="btn btn-outline btn-error rounded-full px-6">ออกจากระบบ</button></div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="resort-card bg-white p-6 flex items-center gap-6"><div class="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 text-2xl"><i class="fa-regular fa-bell"></i></div><div><p class="text-sm font-bold text-stone-400">รอตรวจสอบ (รายการ)</p><p class="text-4xl font-bold mt-1">{{ adminData.stats.pendingCount }}</p></div></div>
+            <div class="resort-card bg-white p-6 flex items-center gap-6"><div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-green-600 text-2xl"><i class="fa-solid fa-sack-dollar"></i></div><div><p class="text-sm font-bold text-stone-400">รายได้ยืนยันแล้ว</p><p class="text-4xl font-bold text-primary mt-1">฿{{ formatPrice(adminData.stats.revenueTotal) }}</p></div></div>
+          </div>
+
+          <div class="tabs tabs-boxed bg-white p-2 rounded-xl mb-6 inline-flex"><a class="tab px-8 py-3 h-auto font-medium transition-all" :class="{'bg-primary text-white shadow-md': adminTab === 'bookings'}" @click="adminTab = 'bookings'">รายการจอง</a><a class="tab px-8 py-3 h-auto font-medium transition-all" :class="{'bg-primary text-white shadow-md': adminTab === 'rooms'}" @click="adminTab = 'rooms'">จัดการห้องพัก</a></div>
+
+          <div v-if="adminTab === 'bookings'" class="resort-card bg-white overflow-x-auto">
+            <table class="table-responsive">
+              <thead><tr><th>รหัสจอง / วันที่</th><th>ลูกค้า / เบอร์โทร</th><th>ห้องพัก / วันที่เข้าพัก</th><th>ยอดชำระ</th><th class="text-center">สลิป</th><th class="text-center">สถานะ</th><th>จัดการ</th></tr></thead>
+              <tbody class="text-sm text-stone-700">
+                <tr v-for="(b, index) in adminData.bookings" :key="b.id || index">
+                  <td><span class="font-bold bg-stone-100 px-2 py-1 rounded">{{ b.id }}</span><br><span class="text-xs text-stone-400 mt-2 block">{{ b.date }}</span></td>
+                  <td><span class="font-bold">{{ b.guest }}</span><br><span class="text-stone-500 mt-1 block">{{ b.phone }}</span></td>
+                  <td><span class="font-bold text-primary">{{ b.roomId }}</span><br><span class="text-xs bg-stone-50 px-2 py-1 rounded mt-1 block">{{ b.checkIn }} - {{ b.checkOut }}</span></td>
+                  <td><span class="font-bold text-lg text-green-600">฿{{ formatPrice(b.price) }}</span></td>
+                  <td class="text-center">
+                    <a v-if="b.slip && b.slip.startsWith('http')" :href="b.slip" target="_blank" class="btn btn-sm btn-circle btn-info btn-outline"><i class="fa-solid fa-image"></i></a>
+                    <button v-else-if="b.slip && b.slip.startsWith('data:image')" @click="viewSlip(b.slip)" class="btn btn-sm btn-circle btn-info btn-outline"><i class="fa-solid fa-image"></i></button>
+                    <span v-else class="text-xs text-stone-300">ไม่มี</span>
+                  </td>
+                  <td class="text-center"><div class="badge border-none font-bold shadow-sm" :class="statusBadge(b.status)">{{ b.status }}</div></td>
+                  <td>
+                    <select v-if="b.status === 'รอตรวจสอบ'" @change="updateStatus(b.id, $event.target.value)" class="select select-bordered select-sm bg-stone-50 w-[120px]">
+                      <option disabled selected>เปลี่ยนสถานะ</option><option value="ยืนยันแล้ว">✅ ยืนยันจอง</option><option value="ยกเลิก">❌ ยกเลิก</option>
+                    </select>
+                    <span v-else class="text-xs text-stone-400 bg-stone-100 px-3 py-1.5 rounded-full inline-block">จัดการแล้ว</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div v-if="adminTab === 'rooms'" class="resort-card bg-white p-6">
+            <div class="flex justify-end mb-6 border-b pb-4"><button @click="openAddRoomModal" class="btn btn-primary rounded-full px-6"><i class="fa-solid fa-plus mr-2"></i> เพิ่มห้องพักใหม่</button></div>
+            <div class="overflow-x-auto">
+              <table class="table-responsive">
+                <thead><tr><th>ภาพ / รหัส</th><th>รายละเอียดห้องพัก</th><th>ราคาต่อคืน</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+                <tbody class="text-sm">
+                  <tr v-for="(r, index) in adminData.rooms" :key="r.id || index">
+                    <td><div class="flex items-center gap-4"><div class="w-16 h-16 rounded-lg overflow-hidden"><img :src="r.image" onerror="this.src='https://placehold.co/100x100'"/></div><span class="font-bold bg-stone-100 px-2 py-1 rounded">{{ r.id }}</span></div></td>
+                    <td><span class="font-bold text-lg">{{ r.name }}</span><br><div class="flex items-center gap-4 mt-2 text-xs"><span class="bg-stone-100 px-2 py-1 rounded">พัก {{ r.capacity }} คน</span><span class="truncate max-w-[200px]" :title="r.amenities">{{ r.amenities }}</span></div></td>
+                    <td><span class="font-bold text-xl text-primary">฿{{ formatPrice(r.price) }}</span></td>
+                    <td><div class="badge font-bold border-none" :class="r.status === 'เปิด' ? 'badge-success text-white' : 'badge-error text-white'">{{ r.status }}</div></td>
+                    <td><button @click="openEditRoomModal(r)" class="btn btn-sm btn-outline rounded-lg"><i class="fa-solid fa-pen mr-1"></i> แก้ไข</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <dialog id="room_modal" class="modal" :class="{'modal-open': showRoomModal}">
+            <div class="modal-box w-11/12 max-w-3xl rounded-2xl p-0 overflow-hidden">
+              <div class="bg-primary p-6 text-white"><h3 class="font-bold font-serif text-2xl"><i class="fa-solid fa-bed"></i> {{ roomForm.action === 'add' ? 'เพิ่มห้องพักใหม่' : 'แก้ไขข้อมูลห้องพัก' }}</h3></div>
+              <form @submit.prevent="submitRoomForm" class="p-8 grid grid-cols-1 md:grid-cols-2 gap-6 bg-white">
+                <div class="form-control"><label class="label font-bold text-stone-700">ชื่อห้องพัก</label><input type="text" v-model="roomForm.name" required class="input input-bordered bg-stone-50" /></div>
+                <div class="form-control"><label class="label font-bold text-stone-700">ราคาต่อคืน</label><input type="number" v-model="roomForm.price" required class="input input-bordered bg-stone-50" /></div>
+                <div class="form-control"><label class="label font-bold text-stone-700">จำนวนคน</label><input type="number" v-model="roomForm.capacity" required class="input input-bordered bg-stone-50" /></div>
+                <div class="form-control"><label class="label font-bold text-stone-700">สถานะ</label><select v-model="roomForm.status" class="select select-bordered bg-stone-50"><option value="เปิด">🟢 เปิดให้จอง</option><option value="ปิด">🔴 ปิดชั่วคราว</option></select></div>
+                <div class="form-control md:col-span-2"><label class="label font-bold text-stone-700">สิ่งอำนวยความสะดวก</label><input type="text" v-model="roomForm.amenities" class="input input-bordered bg-stone-50" /></div>
+                <div class="form-control md:col-span-2"><label class="label font-bold text-stone-700">URL รูปภาพ</label><input type="url" v-model="roomForm.image" class="input input-bordered bg-stone-50" /></div>
+                <div class="modal-action md:col-span-2 mt-4 pt-6 border-t flex gap-4"><button type="button" @click="showRoomModal = false" class="btn btn-ghost rounded-full flex-1">ยกเลิก</button><button type="submit" class="btn btn-primary rounded-full flex-1">บันทึกข้อมูล</button></div>
+              </form>
+            </div>
+            <div class="modal-backdrop bg-stone-900/40 backdrop-blur-sm" @click="showRoomModal = false"></div>
+          </dialog>
+
+        </div>
+      </div>
+
+    </transition>
+  </main>
+  
+  <!-- ================= FOOTER ================= -->
+  <footer class="bg-stone-900 text-stone-300 py-16 border-t-[8px] border-primary">
+    <div class="max-w-7xl mx-auto px-4 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-10">
+      <div class="col-span-1 md:col-span-2">
+        <h2 class="text-3xl font-serif text-white font-bold mb-4 flex items-center gap-3"><i class="fa-solid fa-spa text-primary"></i> {{ settings.ResortName || 'Rabbit Homestay' }}</h2>
+        <p class="mb-6 max-w-sm text-stone-400 text-sm">ที่พัก / โฮมสเตย์ / Pool Villa ในเมืองระยอง เดินทางสะดวก ไม่ไกลทะเล มีสระว่ายน้ำเล่นฟรี พร้อมสิ่งอำนวยความสะดวกครบครัน</p>
+      </div>
+      <div>
+        <h3 class="text-white font-bold uppercase mb-6 text-sm">ติดต่อเรา</h3>
+        <ul class="space-y-4 text-sm text-stone-400">
+          <li class="flex items-start gap-3"><i class="fa-solid fa-location-dot mt-1 text-primary"></i> อ.เมือง จ.ระยอง</li>
+          <li class="flex items-center gap-3"><i class="fa-solid fa-phone text-primary"></i> 082-478-2190</li>
+        </ul>
+      </div>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+  // =======================================================
+  // ระบบจะดึง URL ของคุณที่ใส่ไว้ มาใช้งานแบบอัตโนมัติ
+  // =======================================================
+  const API_URL = "https://script.google.com/macros/s/AKfycbwDPxU-GvMPTrmuhN7QRv5eScr39UvQyOrxPjvOIy_M0ADOqaicUdRg3JN83uCb4vFn/exec"; 
+
+  // ดักจับ Error ป้องกันจอขาว
+  window.addEventListener('error', function(e) {
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('fallback-error').style.display = 'block';
+  });
+
+  const app = Vue.createApp({
+    setup() {
+      const currentView = Vue.ref('home');
+      const isLoading = Vue.ref(false);
+      const rooms = Vue.ref([]);
+      const settings = Vue.ref({});
+      
+      const selectedRoom = Vue.ref(null);
+      const form = Vue.ref({roomId: '', checkIn: '', checkOut: '', guests: 1, customerName: '', phone: '', emailLine: '', note: '', nights: 0, totalPrice: 0, slipBase64: ''});
+      const previewImage = Vue.ref(null);
+
+      const searchKeyword = Vue.ref('');
+      const searchResults = Vue.ref([]);
+      const searched = Vue.ref(false);
+      
+      const isAdminLoggedIn = Vue.ref(false);
+      const adminPwd = Vue.ref('');
+      const adminData = Vue.ref({ bookings: [], rooms: [], stats: { revenueTotal: 0, pendingCount: 0 } });
+      const adminTab = Vue.ref('bookings');
+      
+      const showRoomModal = Vue.ref(false);
+      const roomForm = Vue.ref({ action: 'add', id: '', name: '', price: 0, capacity: 2, amenities: '', image: '', status: 'เปิด' });
+
+      const todayDate = Vue.computed(() => new Date().toISOString().split('T')[0]);
+      const minCheckOut = Vue.computed(() => {
+        if (!form.value.checkIn) return todayDate.value;
+        const out = new Date(form.value.checkIn); out.setDate(out.getDate() + 1);
+        return out.toISOString().split('T')[0];
+      });
+      const calcNights = Vue.computed(() => {
+        if(!form.value.checkIn || !form.value.checkOut) return 0;
+        const diffDays = Math.ceil((new Date(form.value.checkOut) - new Date(form.value.checkIn)) / (1000 * 60 * 60 * 24));
+        return diffDays > 0 ? diffDays : 0;
+      });
+      const calcTotal = Vue.computed(() => selectedRoom.value ? calcNights.value * selectedRoom.value.price : 0);
+
+      // ฟังก์ชันเชื่อมต่อ API (ดักจับ Error กรณีหลังบ้านส่ง HTML กลับมา)
+      const fetchAPI = async (action, payload = null) => {
+        try {
+          let response;
+          if (payload) {
+            response = await fetch(API_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({ action: action, payload: payload })
+            });
+          } else {
+            response = await fetch(API_URL + "?action=" + action);
+          }
+          
+          const text = await response.text();
+          
+          try {
+            return JSON.parse(text);
+          } catch (e) {
+            console.error("API ไม่ได้ส่งข้อมูล JSON กลับมา (อาจเกิดจากไม่ได้ Deploy New Version):", text);
+            Swal.fire({
+              title: "เชื่อมต่อหลังบ้านล้มเหลว", 
+              text: "ดูเหมือนว่า Google Apps Script จะยังไม่ได้กด Deploy -> New Version ครับ กรุณาไปอัปเดตเวอร์ชันหลังบ้านก่อน", 
+              icon: "warning",
+              confirmButtonColor: '#0f766e'
+            });
+            return null;
+          }
+
+        } catch (err) {
+          console.error("API Error:", err);
+          Swal.fire("เชื่อมต่อล้มเหลว", "ไม่สามารถติดต่อฐานข้อมูลได้ โปรดตรวจสอบอินเทอร์เน็ตหรือลิงก์ API", "error");
+          return null;
+        }
+      };
+
+      const loadInitialData = async () => {
+        isLoading.value = true;
+        try { 
+          const res = await fetchAPI('getPublicData'); 
+          if(res && !res.error) { 
+            rooms.value = res.rooms || []; 
+            settings.value = res.settings || {}; 
+          } 
+        } 
+        catch(e) { console.error(e); } finally { isLoading.value = false; }
+      };
+
+      const changeView = async (view) => {
+        currentView.value = view; window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (view === 'admin' && isAdminLoggedIn.value) await loadAdminData();
+        else if (view === 'home' || view === 'rooms') await loadInitialData();
+      };
+
+      const selectRoom = (room) => { selectedRoom.value = room; form.value.roomId = room.id; changeView('booking'); };
+
+      const proceedToPayment = async () => {
+        if(calcNights.value <= 0) return Swal.fire({title: "แจ้งเตือน", text: "กรุณาระบุวันเช็คเอาท์ให้ถูกต้อง", icon: "warning", confirmButtonColor: '#0f766e'});
+        form.value.nights = calcNights.value; form.value.totalPrice = calcTotal.value; changeView('payment');
+      };
+
+      const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if(!file) return;
+        if(file.size > 3 * 1024 * 1024) { Swal.fire({title: "ไฟล์ใหญ่เกิน", text: "ขนาดรูปสลิปห้ามเกิน 3MB", icon: "warning", confirmButtonColor: '#0f766e'}); e.target.value = ''; return; }
+        const reader = new FileReader();
+        reader.onload = (event) => { previewImage.value = event.target.result; form.value.slipBase64 = event.target.result; };
+        reader.readAsDataURL(file);
+      };
+
+      const confirmBooking = async () => {
+        isLoading.value = true;
+        try {
+          const res = await fetchAPI('submitBooking', form.value);
+          if(res && res.success) {
+            Swal.fire({title: "จองสำเร็จ!", html: `รหัสจองของคุณคือ: <b>${res.bookingId}</b><br>สามารถใช้เบอร์โทรตรวจสอบสถานะได้`, icon: "success", confirmButtonColor: '#0f766e'}).then(() => {
+               form.value = {roomId: '', checkIn: '', checkOut: '', guests: 1, customerName: '', phone: '', emailLine: '', note: '', nights: 0, totalPrice: 0, slipBase64: ''};
+               previewImage.value = null; changeView('status');
+            });
+          } else { Swal.fire("เกิดข้อผิดพลาด", res?.message || "จองไม่ได้", "error"); }
+        } catch(e) { Swal.fire("ข้อผิดพลาด", "เชื่อมต่อล้มเหลว", "error"); } finally { isLoading.value = false; }
+      };
+
+      const searchStatus = async () => {
+        if(!searchKeyword.value) return;
+        isLoading.value = true; searched.value = false;
+        try { 
+          const res = await fetchAPI('searchBooking&keyword=' + searchKeyword.value); 
+          searchResults.value = res || []; 
+          searched.value = true; 
+        } 
+        catch(e) {} finally { isLoading.value = false; }
+      };
+
+      const loginAdmin = async () => {
+        isLoading.value = true;
+        try {
+          const res = await fetchAPI('adminAuth&password=' + adminPwd.value);
+          if(res && res.success) { adminPwd.value = ''; await loadAdminData(); isAdminLoggedIn.value = true; } 
+          else { Swal.fire({title: "ผิดพลาด", text: "รหัสผ่านไม่ถูกต้อง", icon: "error", confirmButtonColor: '#0f766e'}); }
+        } catch(e) { Swal.fire("ผิดพลาด", "เซิร์ฟเวอร์ไม่ตอบสนอง", "error"); } finally { isLoading.value = false; }
+      };
+
+      const logoutAdmin = () => { isAdminLoggedIn.value = false; adminData.value = { bookings: [], rooms: [], stats: { revenueTotal: 0, pendingCount: 0 } }; changeView('home'); };
+
+      const loadAdminData = async () => {
+        isLoading.value = true;
+        try {
+          const res = await fetchAPI('getAdminData');
+          if(res) adminData.value = { bookings: res.bookings || [], rooms: res.rooms || [], stats: res.stats || { revenueTotal: 0, pendingCount: 0 } };
+        } catch(e) { console.error(e); Swal.fire("แจ้งเตือน", "โหลดข้อมูลแอดมินล้มเหลว", "error"); } finally { isLoading.value = false; }
+      };
+
+      const updateStatus = async (id, status) => {
+        isLoading.value = true;
+        try { await fetchAPI('updateBookingStatus', {id, status}); await loadAdminData(); Swal.fire({title: "สำเร็จ", text: "เปลี่ยนสถานะเรียบร้อย", icon: "success", confirmButtonColor: '#0f766e'}); } 
+        catch(e) {} finally { isLoading.value = false; }
+      };
+
+      const openAddRoomModal = () => { roomForm.value = { action: 'add', id: '', name: '', price: 0, capacity: 2, amenities: '', image: '', status: 'เปิด' }; showRoomModal.value = true; };
+      const openEditRoomModal = (r) => { roomForm.value = { action: 'edit', id: r.id, name: r.name, price: r.price, capacity: r.capacity, amenities: r.amenities, image: r.image, status: r.status }; showRoomModal.value = true; };
+      const submitRoomForm = async () => {
+        isLoading.value = true;
+        try { const res = await fetchAPI('saveRoomData', roomForm.value); if(res && res.success) { showRoomModal.value = false; await loadAdminData(); } } 
+        catch(e) {} finally { isLoading.value = false; }
+      };
+
+      const viewSlip = (base64String) => { Swal.fire({title: 'สลิปโอนเงิน', imageUrl: base64String, imageAlt: 'สลิปโอนเงิน', imageWidth: 400, confirmButtonText: 'ปิด', confirmButtonColor: '#0f766e'}); };
+      const formatPrice = (val) => Number(val || 0).toLocaleString('th-TH');
+      const statusBadge = (s) => { const txt = (s || '').trim(); if(txt === 'ยืนยันแล้ว') return 'bg-green-100 text-green-700 border-green-200'; if(txt === 'ยกเลิก') return 'bg-red-100 text-red-700 border-red-200'; return 'bg-amber-100 text-amber-700 border-amber-200'; };
+      const statusColor = (s) => { const txt = (s || '').trim(); if(txt === 'ยืนยันแล้ว') return 'border-green-500'; if(txt === 'ยกเลิก') return 'border-red-500'; return 'border-amber-400'; };
+
+      Vue.onMounted(() => { loadInitialData(); });
+
+      return {
+        currentView, isLoading, rooms, settings, changeView, loadInitialData,
+        selectedRoom, selectRoom, form, todayDate, minCheckOut, calcNights, calcTotal, proceedToPayment,
+        handleFileUpload, previewImage, confirmBooking, searchKeyword, searchResults, searched, searchStatus,
+        isAdminLoggedIn, adminPwd, adminData, adminTab, loginAdmin, logoutAdmin, updateStatus,
+        showRoomModal, roomForm, openAddRoomModal, openEditRoomModal, submitRoomForm, viewSlip, formatPrice, statusBadge, statusColor
+      };
+    }
+  });
+
+  app.mount('#app');
+</script>
+</body>
+</html>
